@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PDF Assignment Renamer</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --blue: #3b82f6;
+      --blue-dark: #2563eb;
+      --indigo: #6366f1;
+      --green: #22c55e;
+      --green-bg: #f0fdf4;
+      --green-border: #bbf7d0;
+      --yellow: #f59e0b;
+      --yellow-bg: #fffbeb;
+      --yellow-border: #fde68a;
+      --red: #ef4444;
+      --red-bg: #fef2f2;
+      --red-border: #fecaca;
+      --gray-50: #f8fafc;
+      --gray-100: #f1f5f9;
+      --gray-200: #e2e8f0;
+      --gray-300: #cbd5e1;
+      --gray-400: #94a3b8;
+      --gray-500: #64748b;
+      --gray-600: #475569;
+      --gray-700: #334155;
+      --gray-800: #1e293b;
+      --gray-900: #0f172a;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--gray-50);
+      color: var(--gray-800);
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    .app-header {
+      background: linear-gradient(135deg, var(--blue), var(--indigo));
+      color: white;
+      padding: 20px 32px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      box-shadow: 0 2px 8px rgba(59,130,246,0.3);
+    }
+    .app-header .logo {
+      width: 40px; height: 40px;
+      background: rgba(255,255,255,0.2);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .app-header h1 { font-size: 20px; font-weight: 700; }
+    .app-header p { font-size: 13px; opacity: 0.85; margin-top: 2px; }
+
+    /* ── Steps indicator ── */
+    .steps-bar {
+      background: white;
+      border-bottom: 1px solid var(--gray-200);
+      padding: 0 32px;
+      display: flex;
+      gap: 0;
+    }
+    .step-tab {
+      padding: 14px 20px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--gray-400);
+      border-bottom: 2px solid transparent;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: default;
+      user-select: none;
+      transition: color 0.2s;
+    }
+    .step-tab.active { color: var(--blue); border-bottom-color: var(--blue); font-weight: 600; }
+    .step-tab.done { color: var(--green); }
+    .step-num {
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      background: var(--gray-200);
+      color: var(--gray-500);
+      font-size: 11px;
+      font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      transition: all 0.2s;
+    }
+    .step-tab.active .step-num { background: var(--blue); color: white; }
+    .step-tab.done .step-num { background: var(--green); color: white; }
+
+    /* ── Main content ── */
+    .main { padding: 28px 32px; max-width: 1200px; margin: 0 auto; }
+
+    /* ── Cards ── */
+    .card {
+      background: white;
+      border: 1px solid var(--gray-200);
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+    .card-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--gray-800);
+      margin-bottom: 4px;
+    }
+    .card-sub {
+      font-size: 12px;
+      color: var(--gray-500);
+      margin-bottom: 16px;
+    }
+
+    /* ── Step 1: File loaders ── */
+    .loaders-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    .loader-zone {
+      border: 2px dashed var(--gray-300);
+      border-radius: 10px;
+      padding: 24px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: var(--gray-50);
+    }
+    .loader-zone:hover { border-color: var(--blue); background: #eff6ff; }
+    .loader-zone.loaded { border-color: var(--green); border-style: solid; background: var(--green-bg); cursor: default; }
+    .loader-zone .icon { font-size: 32px; margin-bottom: 8px; }
+    .loader-zone h3 { font-size: 13px; font-weight: 600; color: var(--gray-700); margin-bottom: 4px; }
+    .loader-zone p { font-size: 11px; color: var(--gray-500); }
+    .loader-zone .status-tag {
+      display: inline-block;
+      margin-top: 8px;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      background: var(--green-bg);
+      color: #15803d;
+      border: 1px solid var(--green-border);
+    }
+
+    .start-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      padding: 13px;
+      margin-top: 16px;
+      background: var(--blue);
+      color: white;
+      border: none;
+      border-radius: 9px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, opacity 0.15s;
+    }
+    .start-btn:hover:not(:disabled) { background: var(--blue-dark); }
+    .start-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    /* ── Step 2: Progress ── */
+    .progress-wrap { margin-bottom: 16px; }
+    .progress-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      color: var(--gray-500);
+      margin-bottom: 6px;
+    }
+    .progress-bar-track {
+      height: 8px;
+      background: var(--gray-200);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--blue), var(--indigo));
+      border-radius: 99px;
+      transition: width 0.3s ease;
+    }
+    .progress-current {
+      margin-top: 10px;
+      font-size: 12px;
+      color: var(--gray-600);
+      font-style: italic;
+    }
+    .ocr-log {
+      margin-top: 12px;
+      max-height: 180px;
+      overflow-y: auto;
+      background: var(--gray-900);
+      border-radius: 8px;
+      padding: 12px;
+    }
+    .ocr-log-line {
+      font-size: 11px;
+      font-family: 'SF Mono', 'Consolas', monospace;
+      color: #94a3b8;
+      line-height: 1.6;
+    }
+    .ocr-log-line.ok { color: #4ade80; }
+    .ocr-log-line.warn { color: #fbbf24; }
+    .ocr-log-line.err { color: #f87171; }
+
+    /* ── Step 3: Results table ── */
+    .table-controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+      flex-wrap: wrap;
+    }
+    .table-controls .summary-pills {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      flex: 1;
+    }
+    .pill {
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .pill-green { background: var(--green-bg); color: #15803d; border: 1px solid var(--green-border); }
+    .pill-yellow { background: var(--yellow-bg); color: #92400e; border: 1px solid var(--yellow-border); }
+    .pill-red { background: var(--red-bg); color: #991b1b; border: 1px solid var(--red-border); }
+    .pill-blue { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+
+    .results-table-wrap {
+      overflow-x: auto;
+      border-radius: 10px;
+      border: 1px solid var(--gray-200);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    thead th {
+      background: var(--gray-50);
+      padding: 10px 12px;
+      text-align: left;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--gray-500);
+      border-bottom: 1px solid var(--gray-200);
+      white-space: nowrap;
+    }
+    tbody tr { border-bottom: 1px solid var(--gray-100); }
+    tbody tr:last-child { border-bottom: none; }
+    tbody td { padding: 10px 12px; vertical-align: middle; }
+    tbody tr.row-matched { background: white; }
+    tbody tr.row-matched:hover { background: var(--gray-50); }
+    tbody tr.row-low { background: var(--yellow-bg); }
+    tbody tr.row-manual { background: #fef9f0; }
+    tbody tr.row-unmatched { background: var(--red-bg); }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .badge-green { background: var(--green-bg); color: #15803d; border: 1px solid var(--green-border); }
+    .badge-yellow { background: var(--yellow-bg); color: #92400e; border: 1px solid var(--yellow-border); }
+    .badge-red { background: var(--red-bg); color: #991b1b; border: 1px solid var(--red-border); }
+    .badge-blue { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+
+    .conf-bar {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+    }
+    .conf-track {
+      width: 60px; height: 5px;
+      background: var(--gray-200);
+      border-radius: 99px;
+      overflow: hidden;
+      display: inline-block;
+    }
+    .conf-fill {
+      height: 100%;
+      border-radius: 99px;
+    }
+
+    .assign-select {
+      width: 100%;
+      padding: 5px 8px;
+      border: 1px solid var(--yellow-border);
+      border-radius: 6px;
+      font-size: 12px;
+      background: white;
+      color: var(--gray-800);
+      cursor: pointer;
+    }
+    .assign-select:focus { outline: none; border-color: var(--blue); }
+
+    .new-name-cell {
+      font-family: 'SF Mono', 'Consolas', monospace;
+      font-size: 11px;
+      color: var(--gray-700);
+      background: var(--gray-100);
+      padding: 3px 6px;
+      border-radius: 4px;
+      word-break: break-all;
+    }
+
+    .cb { width: 16px; height: 16px; cursor: pointer; accent-color: var(--blue); }
+
+    .filename-cell { font-size: 12px; color: var(--gray-600); max-width: 200px; }
+    .ocr-name-cell { font-size: 12px; color: var(--gray-500); font-style: italic; max-width: 150px; }
+    .student-cell { font-size: 12px; font-weight: 500; max-width: 200px; }
+
+    /* ── Apply section ── */
+    .apply-bar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 16px;
+      flex-wrap: wrap;
+    }
+    .apply-btn {
+      padding: 11px 24px;
+      background: var(--green);
+      color: white;
+      border: none;
+      border-radius: 9px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: background 0.15s;
+    }
+    .apply-btn:hover:not(:disabled) { background: #16a34a; }
+    .apply-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    .csv-btn {
+      padding: 11px 20px;
+      background: white;
+      color: var(--gray-700);
+      border: 1px solid var(--gray-300);
+      border-radius: 9px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: background 0.15s;
+    }
+    .csv-btn:hover { background: var(--gray-50); }
+    .csv-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* ── Step 4: Complete ── */
+    .complete-box {
+      text-align: center;
+      padding: 48px 24px;
+    }
+    .complete-icon {
+      width: 64px; height: 64px;
+      background: var(--green-bg);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 16px;
+      font-size: 28px;
+    }
+    .complete-box h2 { font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+    .complete-box p { font-size: 14px; color: var(--gray-500); margin-bottom: 20px; }
+    .restart-btn {
+      padding: 10px 24px;
+      background: var(--blue);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .restart-btn:hover { background: var(--blue-dark); }
+
+    /* ── Utilities ── */
+    .hidden { display: none !important; }
+    .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .section-title {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--gray-400);
+      margin-bottom: 8px;
+    }
+    .info-note {
+      background: #eff6ff;
+      border: 1px solid #bfdbfe;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 12px;
+      color: #1d4ed8;
+      margin-top: 12px;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── Header ── -->
+<div class="app-header">
+  <div class="logo">
+    <svg width="22" height="22" fill="none" stroke="white" stroke-width="2" viewBox="0 0 24 24">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+      <polyline points="14,2 14,8 20,8"/>
+      <line x1="16" y1="13" x2="8" y2="13"/>
+      <line x1="16" y1="17" x2="8" y2="17"/>
+    </svg>
+  </div>
+  <div>
+    <h1>PDF Assignment Renamer</h1>
+    <p>OCR · Match · Rename — Applied Technology Schools</p>
+  </div>
+</div>
+
+<!-- ── Steps bar ── -->
+<div class="steps-bar">
+  <div class="step-tab active" id="tab-1">
+    <span class="step-num">1</span> Load Files
+  </div>
+  <div class="step-tab" id="tab-2">
+    <span class="step-num">2</span> OCR Processing
+  </div>
+  <div class="step-tab" id="tab-3">
+    <span class="step-num">3</span> Review &amp; Assign
+  </div>
+  <div class="step-tab" id="tab-4">
+    <span class="step-num">4</span> Done
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════ -->
+<!-- STEP 1 — Load Files -->
+<!-- ════════════════════════════════════════════ -->
+<div class="main" id="step-1">
+  <div class="card">
+    <div class="card-title">Load your files</div>
+    <div class="card-sub">Select the folder containing student PDF assignments and the Excel gradebook.</div>
+
+    <div class="loaders-grid">
+      <!-- PDF Folder -->
+      <div class="loader-zone" id="zone-pdf">
+        <div class="icon">📁</div>
+        <h3>Student PDF Folder</h3>
+        <p>Click to select the folder containing all student assignment PDFs</p>
+        <div class="status-tag hidden" id="pdf-tag"></div>
+      </div>
+
+      <!-- Excel File -->
+      <div class="loader-zone" id="zone-excel">
+        <div class="icon">📊</div>
+        <h3>Gradebook (Excel)</h3>
+        <p>Click to select the .xlsx file with student names and ATS IDs</p>
+        <div class="status-tag hidden" id="excel-tag"></div>
+      </div>
+    </div>
+
+    <div class="info-note" id="step1-note">
+      💡 The first time you run OCR, the language model (~10 MB) will be downloaded and cached automatically. Subsequent runs are instant.
+    </div>
+
+    <button class="start-btn" id="start-btn" disabled>
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+        <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+      </svg>
+      Start OCR Processing
+    </button>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════ -->
+<!-- STEP 2 — Processing -->
+<!-- ════════════════════════════════════════════ -->
+<div class="main hidden" id="step-2">
+  <div class="card">
+    <div class="card-title">Scanning PDFs…</div>
+    <div class="card-sub">Reading the first page of each file and recognising student information.</div>
+
+    <div class="progress-wrap">
+      <div class="progress-label">
+        <span id="prog-label">Initialising OCR engine…</span>
+        <span id="prog-pct">0%</span>
+      </div>
+      <div class="progress-bar-track">
+        <div class="progress-bar-fill" id="prog-fill" style="width:0%"></div>
+      </div>
+      <div class="progress-current" id="prog-current"></div>
+    </div>
+
+    <!-- Course code confirmation — shown after first-PDF scan -->
+    <div id="course-code-confirm" class="hidden" style="
+      margin-top:16px;background:#eff6ff;border:1px solid #bfdbfe;
+      border-radius:10px;padding:18px 20px;
+    ">
+      <!-- Panel A: code was detected → Yes / No buttons -->
+      <div id="cc-panel-detected" class="hidden">
+        <div style="font-size:12px;color:#3b82f6;margin-bottom:6px;font-weight:600;">
+          🔍 Course code detected from first page
+        </div>
+        <div style="font-size:28px;font-weight:800;letter-spacing:0.1em;color:#1e293b;margin-bottom:14px;"
+             id="cc-detected-value">ENE61</div>
+        <div style="font-size:12px;color:#475569;margin-bottom:12px;">
+          Is this correct? It will be applied to every renamed file.
+        </div>
+        <div style="display:flex;gap:10px;">
+          <button id="cc-yes-btn" style="padding:9px 24px;background:#22c55e;color:white;border:none;
+            border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;">✓ Yes, use this</button>
+          <button id="cc-no-btn" style="padding:9px 20px;background:white;color:#475569;
+            border:1px solid #cbd5e1;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
+            ✗ No, change it</button>
+        </div>
+      </div>
+
+      <!-- Panel B: not detected, or user clicked No → manual input -->
+      <div id="cc-panel-manual" class="hidden">
+        <div style="font-size:12px;color:#3b82f6;margin-bottom:8px;font-weight:600;"
+             id="cc-manual-label">Enter the course code for this folder:</div>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+          <input id="confirm-code-input" type="text" maxlength="12"
+            style="padding:9px 14px;border:2px solid #3b82f6;border-radius:8px;
+                   font-size:16px;font-weight:700;letter-spacing:0.08em;
+                   color:#1e293b;text-transform:uppercase;width:150px;outline:none;font-family:inherit;"
+            placeholder="e.g. ENE61">
+          <button id="confirm-code-btn" style="padding:9px 22px;background:#3b82f6;color:white;
+            border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
+            Confirm &amp; Continue</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- GC/PC criteria confirmation — shown after pages 1-2 scan -->
+    <div id="criteria-confirm" class="hidden" style="
+      margin-top:16px;background:#f0fdf4;border:1px solid #bbf7d0;
+      border-radius:10px;padding:18px 20px;
+    ">
+      <!-- Panel A: detected → Yes / No -->
+      <div id="crit-panel-detected" class="hidden">
+        <div style="font-size:12px;color:#15803d;margin-bottom:6px;font-weight:600;">
+          📋 GC / PC criteria range detected (pages 1–2)
+        </div>
+        <div style="font-size:26px;font-weight:800;letter-spacing:0.06em;color:#1e293b;margin-bottom:10px;"
+             id="crit-detected-value">GC 5.1 – 5.3</div>
+        <div style="font-size:12px;color:#475569;margin-bottom:12px;">
+          Is this the full criteria range for this assignment?
+        </div>
+        <div style="display:flex;gap:10px;">
+          <button id="crit-yes-btn" style="padding:9px 24px;background:#22c55e;color:white;border:none;
+            border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;">✓ Yes, correct</button>
+          <button id="crit-no-btn" style="padding:9px 20px;background:white;color:#475569;
+            border:1px solid #cbd5e1;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
+            ✗ No, change it</button>
+        </div>
+      </div>
+
+      <!-- Panel B: manual entry -->
+      <div id="crit-panel-manual" class="hidden">
+        <div style="font-size:12px;color:#15803d;margin-bottom:10px;font-weight:600;"
+             id="crit-manual-label">Enter the criteria range for this assignment:</div>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+          <select id="crit-type-select" style="padding:9px 12px;border:2px solid #22c55e;border-radius:8px;
+            font-size:15px;font-weight:700;color:#1e293b;outline:none;cursor:pointer;">
+            <option value="GC">GC</option>
+            <option value="PC">PC</option>
+          </select>
+          <input id="crit-start-input" type="text" maxlength="6" placeholder="Start e.g. 5.1"
+            style="width:120px;padding:9px 12px;border:2px solid #22c55e;border-radius:8px;
+                   font-size:14px;font-weight:600;color:#1e293b;outline:none;">
+          <span style="font-size:16px;color:#64748b;font-weight:600;">→</span>
+          <input id="crit-end-input" type="text" maxlength="6" placeholder="End e.g. 5.3"
+            style="width:120px;padding:9px 12px;border:2px solid #22c55e;border-radius:8px;
+                   font-size:14px;font-weight:600;color:#1e293b;outline:none;">
+          <button id="crit-confirm-btn" style="padding:9px 20px;background:#22c55e;color:white;
+            border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">
+            Confirm &amp; Continue</button>
+        </div>
+        <div id="crit-manual-error" style="color:#ef4444;font-size:11px;margin-top:6px;display:none;">
+          Please fill in both start and end numbers.
+        </div>
+      </div>
+    </div>
+
+    <div class="ocr-log" id="ocr-log"></div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════ -->
+<!-- STEP 3 — Review -->
+<!-- ════════════════════════════════════════════ -->
+<div class="main hidden" id="step-3">
+  <div class="card">
+    <div class="card-title">Review Matches</div>
+    <div class="card-sub">Verify each match before renaming. Use dropdowns to manually assign any unmatched files.</div>
+
+    <div class="table-controls">
+      <div class="summary-pills" id="summary-pills"></div>
+      <label style="font-size:12px;color:var(--gray-500);display:flex;align-items:center;gap:6px;cursor:pointer;">
+        <input type="checkbox" class="cb" id="select-all" checked>
+        Select all
+      </label>
+    </div>
+
+    <div class="results-table-wrap">
+      <table id="results-table">
+        <thead>
+          <tr>
+            <th style="width:36px"></th>
+            <th>Original Filename</th>
+            <th>OCR Name Read</th>
+            <th>Matched Student</th>
+            <th>ATS ID</th>
+            <th>Confidence</th>
+            <th>New Filename</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="results-tbody"></tbody>
+      </table>
+    </div>
+
+    <div class="apply-bar">
+      <button class="apply-btn" id="apply-btn">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+          <polyline points="20,6 9,17 4,12"/>
+        </svg>
+        <span id="apply-label">Apply Renaming</span>
+      </button>
+      <button class="csv-btn" id="csv-btn">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7,10 12,15 17,10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        Download Report CSV
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════ -->
+<!-- STEP 4 — Done -->
+<!-- ════════════════════════════════════════════ -->
+<div class="main hidden" id="step-4">
+  <div class="card">
+    <div class="complete-box">
+      <div class="complete-icon">✅</div>
+      <h2 id="done-title">Renaming Complete!</h2>
+      <p id="done-sub">Files have been copied to the output subfolder.</p>
+      <div id="done-stats" style="margin-bottom:20px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;"></div>
+      <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+        <button class="csv-btn" id="done-csv-btn">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7,10 12,15 17,10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          Download Report CSV
+        </button>
+        <button class="restart-btn" id="restart-btn">Process Another Folder</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="lib/xlsx.full.min.js"></script>
+<script src="lib/tesseract.min.js"></script>
+<script type="module" src="app.js"></script>
+</body>
+</html>
