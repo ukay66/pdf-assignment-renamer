@@ -4,9 +4,7 @@
   "version": "1.0.0",
   "description": "OCR-powered renamer for student assignment PDFs — matches names to gradebook and applies standard filenames.",
   "permissions": ["tabs"],
-  "host_permissions": [
-    "https://tessdata.projectnaptha.com/*"
-  ],
+  "host_permissions": [],
   "action": {
     "default_popup": "popup.html",
     "default_icon": {

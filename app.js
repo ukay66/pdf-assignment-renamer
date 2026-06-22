@@ -324,7 +324,7 @@ async function startProcessing() {
 
     const workerPath = chrome.runtime.getURL('lib/worker.min.js');
     const corePath   = chrome.runtime.getURL('lib/');
-    const langPath   = 'https://tessdata.projectnaptha.com/4.0.0'; // no trailing slash per API docs
+    const langPath   = chrome.runtime.getURL('lib'); // bundled locally — works fully offline
 
     addLog(`Worker: ${workerPath}`, 'ok');
 
